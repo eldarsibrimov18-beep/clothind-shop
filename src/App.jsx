@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Header from "./components/Hreader";
+import { AppProvider } from "./context/AppContext";
+import Header from "./components/Header";
 import ProductCard from "./components/Card";
 import DropdownFilter from "./components/DropdownFilter";
 import Footer from "./components/footer";
@@ -11,6 +12,7 @@ import ProductDetailPage from "./components/ProductDetailPage";
 
 const App = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const products = [
     {
@@ -159,48 +161,68 @@ const App = () => {
     },
   ];
 
-  // Функция для фильтрации товаров
   const handleFilterChange = (category) => {
     setSelectedCategory(category);
   };
 
-  // Фильтрация товаров по выбранной категории
-  const filteredProducts =
-    selectedCategory === "all"
-      ? products
-      : products.filter((product) => product.category === selectedCategory);
+  const handleSearch = (query) => {
+    setSearchQuery(query.toLowerCase());
+  };
 
-  // Главная страница с товарами
+  const filteredProducts = products.filter((product) => {
+    const categoryMatch =
+      selectedCategory === "all" || product.category === selectedCategory;
+
+    const searchMatch =
+      searchQuery === "" ||
+      product.name.toLowerCase().includes(searchQuery) ||
+      product.description.toLowerCase().includes(searchQuery) ||
+      product.brand.toLowerCase().includes(searchQuery);
+
+    return categoryMatch && searchMatch;
+  });
+
   const HomePage = () => (
     <div className="app-container">
       <DropdownFilter products={products} onFilterChange={handleFilterChange} />
       <div className="products-grid">
-        {filteredProducts.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
+        {filteredProducts.length > 0 ? (
+          filteredProducts.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))
+        ) : (
+          <div className="no-results">
+            <p>
+              Товары не найдены. Попробуйте изменить поисковый запрос или
+              категорию.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
 
   return (
-    <Router>
-      <div className="main">
-        <Header />
-        <main>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/cart" element={<CartPage />} />
-            <Route path="/wishlist" element={<WishlistPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route
-              path="/product/:id"
-              element={<ProductDetailPage products={products} />}
-            />
-          </Routes>
-        </main>
-        <Footer />
-      </div>
-    </Router>
+    <AppProvider>
+      <Router>
+        <div className="main">
+          <Header onSearch={handleSearch} />
+          <main>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/cart" element={<CartPage />} />
+              <Route path="/wishlist" element={<WishlistPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route
+                path="/product/:id"
+                element={<ProductDetailPage products={products} />}
+              />
+            </Routes>
+          </main>
+          <Footer />
+        </div>
+      </Router>
+    </AppProvider>
   );
 };
 
